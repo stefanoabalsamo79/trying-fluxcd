@@ -8,7 +8,7 @@ Tiny lab for spike purpose about  [`Flux`](https://fluxcd.io/)
 2. [`kubectl`](https://kubernetes.io/docs/tasks/tools/): docker cli
 3. [`kind`](https://kind.sigs.k8s.io/)
 4. [`Flux CLI`](https://fluxcd.io/flux/installation/#install-the-flux-cli)
-5. [`yq`](https://github.com/mikefarah/yq): [`yaml`](https://en.wikipedia.org/wiki/YAML) parser
+5. [`yq`](https://github.com/mikefarah/yq)
 
 ---
 
@@ -40,7 +40,7 @@ flux bootstrap github \
 --path=clusters/kind
 ```
 
-You will see an output like this:
+You will see the following output:
 ![image-003](./diagrams_and_images/image_003.png)
 
 #### After flux bootstrap is done you can see that the demanded [`trying-flux-demo`](https://github.com/stefanoabalsamo79/trying-flux-demo.git) repository has been created along with some controller installed on your cluster
@@ -48,15 +48,15 @@ You will see an output like this:
 
 ![image-005](./diagrams_and_images/image_005.png)
 
+You can tell that some CRD have been created to make flux working within the cluster along with `flux-system` namespace and `Kustomization` resource (if you don't know yet have a look [kustomize](https://kustomize.io/)) working with `GitRepository` CRD.
+
 #### Clone the repository which have been created and have a look
 ```bash
 git clone https://github.com/stefanoabalsamo79/trying-fluxcd-demo.git
 ```
-You can tell that some CRD have been created to make flux working within the cluster along with `flux-system` namespace and `Kustomization` resource (if you don't know yet have a look [kustomize](https://kustomize.io/)) working with `GitRepository` CRD.
-
 ![image-006](./diagrams_and_images/image_006.png)
 
-#### So now let's create some resources and place them at `clusters/minikube/test/rbac.yaml` within `trying-flux-demo` repository
+#### So now let's define a `ServiceAccount` and `RoleBinding` within a file at `clusters/minikube/test/rbac.yaml` within `trying-flux-demo` repository
 
 ```yaml
 ---
@@ -90,14 +90,14 @@ subjects:
 
 ```
 
-#### And then push those changes against the repository itself
+#### And then push those changes against the repository 
 ```bash
 git add . &&  \
 git commit -m "adding ns, svc acct and rolebinding" &&  \
 git push origin main
 ```
 
-#### Trigger flux reconciliation to prevent from waiting its next run which has been configured as 10 minutes frequency
+#### Trigger flux reconciliation to prevent from waiting its next run which has been configured as 1 minute frequency (default)
 ```bash
 flux reconcile ks flux-system --with-source
 ```
@@ -140,43 +140,33 @@ metadata:
   namespace: test
 spec:
   interval: 1m0s
-  path: ./app/kustomize
+  path: ./app/kustomize # notice not the whole repository, just where the app's manifest are found
   prune: false
   sourceRef:
     kind: GitRepository
     name: trying-fluxcd-app
 ```
 
-#### Before pushing the new resources let's clone the [`test-flux-app`](https://github.com/stefanoabalsamo79/test-flux-app.git), build tag a push the image
-```bash
-git clone https://github.com/stefanoabalsamo79/test-flux-app.git
-```
-```bash
-make build tag load_image
-```
-
-#### Now that you have you new sync let's push them against `test-flux-app` repository
+#### Now let's push these changes to `trying-flux-demo` repository and fire flux reconciliation again 
 ```bash
 git add . &&  \
 git commit -m "adding GitRepository and Kustomization for application sync" && \ 
 git push origin main
 ```
-
-#### Fire flux reconciliation again 
 ```bash
 flux reconcile ks flux-system --with-source
 ```
 
 #### Test the app
 ```bash
-curl http://localhost:3000/
+curl http://localhost
 ```
 ***output:***
 ```json
 {"message":"[1.0.0] Howdy, how is going? All good over here :-)"}
 ```
 
-#### Now let's make some changes to `test-flux-app` deployment, TEST_VAR env variable for instance in order to tell that the app replies with a difference payload
+#### Now let's make some changes to the [`Deployment`](./app/kustomize/deployment.yaml), TEST_VAR env variable for instance so we can trigger the sync and tell that a new version is replying
 ```yaml
 apiVersion: apps/v1
 kind: Deployment
@@ -193,8 +183,7 @@ spec:
           - name: TEST_VAR
             value: 1.0.1
 ```
-
-
+### Push this changes to `trying-fluxcd` repository
 ```bash
 git add . &&  \
 git commit -m "changing TEST_VAR variable so the application will be synched " && \ 
@@ -208,14 +197,14 @@ flux reconcile ks flux-system --with-source
 
 #### Test the app again
 ```bash
-curl http://localhost:3000/
+curl http://localhost
 ```
 ***output:***
 ```json
 {"message":"[1.0.1] Howdy, how is going? All good over here :-)"}
 ```
 
-#### get sources
+#### Some command I found useful
 ```bash
 flux get source git -A
 ```
