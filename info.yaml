@@ -1,0 +1,7 @@
+defaultClusterName: kind
+clusterName: test-cluster
+demoRepository: trying-fluxcd-demo
+app:
+  name: test-flux-app
+  version: 1.0.0
+  namespace: test
