@@ -104,22 +104,6 @@ flux reconcile ks flux-system --with-source
 
 #### Setting you new sources (i.e. git and kustomization sync)
 ```bash
-flux create source git test-flux-app \
---namespace=test \
---url=https://github.com/stefanoabalsamo79/test-flux-app \
---branch=master \
---export > /Users/stefanoabalsamo/MyProjects/trying-fluxcd-demo/clusters/minikube/test/sync.yaml
-```
-```bash
-flux create kustomization test-flux-app \
---namespace=test \
---source=GitRepository/test-flux-app \
---path="./kustomize" \
---export >> /Users/stefanoabalsamo/MyProjects/trying-fluxcd-demo/clusters/minikube/test/sync.yaml
-```
-
-***good ones***
-```bash
 flux create source git trying-fluxcd-app \
 --namespace=test \
 --url=https://github.com/stefanoabalsamo79/trying-fluxcd \
@@ -136,8 +120,31 @@ flux create kustomization trying-fluxcd-app \
 
 #### Have a look at `clusters/minikube/test/sync.yaml` file you've just created before applying
 ```yaml
+---
+apiVersion: source.toolkit.fluxcd.io/v1beta2
+kind: GitRepository
+metadata:
+  name: trying-fluxcd-app
+  namespace: test
+spec:
+  interval: 1m0s
+  ref:
+    branch: master
+  url: https://github.com/stefanoabalsamo79/trying-fluxcd
 
-
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1beta2
+kind: Kustomization
+metadata:
+  name: trying-fluxcd-app
+  namespace: test
+spec:
+  interval: 1m0s
+  path: ./app/kustomize
+  prune: false
+  sourceRef:
+    kind: GitRepository
+    name: trying-fluxcd-app
 ```
 
 #### Before pushing the new resources let's clone the [`test-flux-app`](https://github.com/stefanoabalsamo79/test-flux-app.git), build tag a push the image
@@ -151,7 +158,7 @@ make build tag load_image
 #### Now that you have you new sync let's push them against `test-flux-app` repository
 ```bash
 git add . &&  \
-git commit -m "adding GitRepository and Kustomization for test-flux-app sync" && \ 
+git commit -m "adding GitRepository and Kustomization for application sync" && \ 
 git push origin main
 ```
 
@@ -190,7 +197,7 @@ spec:
 
 ```bash
 git add . &&  \
-git commit -m "changing TEST_VAR variable for test-flux-app" && \ 
+git commit -m "changing TEST_VAR variable so the application will be synched " && \ 
 git push origin master
 ```
 
